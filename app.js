@@ -76,7 +76,7 @@
   }
   function begin(task, minutes) {
     const totalMs = minutes * 60 * 1000;
-    state = { task, totalMs, endAt: Date.now() + totalMs, remainingMs: totalMs, paused: false, done: false };
+    state = { task, totalMs, startedAt: Date.now(), endAt: Date.now() + totalMs, remainingMs: totalMs, paused: false, done: false };
     save(); showSession();
   }
   function togglePause() {
@@ -134,14 +134,17 @@
   // ---------- boot ----------
   async function boot() {
     const saved = load();
-    if (saved && !saved.done) { state = saved; showSession(); return; }
     let remote = null;
     try {
       const r = await fetch(`task.json?t=${Date.now()}`, { cache: 'no-store' });
       if (r.ok) remote = await r.json();
     } catch {}
+    const setAt = remote && remote.set_at ? Date.parse(remote.set_at) : NaN;
     const fresh = remote && typeof remote.task === 'string' && remote.task.trim() && remote.minutes > 0
-      && remote.set_at && (Date.now() - Date.parse(remote.set_at)) < MAX_AGE;
+      && !isNaN(setAt) && (Date.now() - setAt) < MAX_AGE;
+    // A task.json newer than the saved session replaces it; otherwise resume the saved session.
+    const resume = saved && !saved.done && !(fresh && setAt > (saved.startedAt || 0));
+    if (resume) { state = saved; showSession(); return; }
     if (fresh) { begin(remote.task.trim(), +remote.minutes); return; }
     showSetup(remote && remote.task ? remote.task : '');
   }
