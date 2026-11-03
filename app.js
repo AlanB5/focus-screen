@@ -12,15 +12,40 @@
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } };
   const save = () => { try { state ? localStorage.setItem(KEY, JSON.stringify(state)) : localStorage.removeItem(KEY); } catch {} };
 
-  // ---------- wake lock ----------
-  async function keepAwake() {
-    if (!('wakeLock' in navigator) || wakeLock) return;
-    try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } catch { wakeLock = null; }
+  // ---------- keep awake ----------
+  // Primary: Wake Lock API. Fallback (and belt-and-braces on iOS): a tiny looping
+  // inline video, which is what NoSleep.js does. Both are retried on touch,
+  // on visibility change, and every 20 s while a session is running.
+  let video = null;
+  function videoKeepAwake() {
+    if (!video) {
+      video = document.createElement('video');
+      video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', '');
+      video.muted = true; video.loop = true; video.setAttribute('title', 'keep awake');
+      video.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0.01;pointer-events:none;left:0;top:0';
+      const add = (src, type) => { const el = document.createElement('source'); el.src = src; el.type = type; video.appendChild(el); };
+      add(KEEPAWAKE_WEBM, 'video/webm'); add(KEEPAWAKE_MP4, 'video/mp4');
+      document.body.appendChild(video);
+    }
+    if (video.paused) video.play().catch(() => {});
   }
-  function releaseAwake() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
+  function videoRelease() { if (video && !video.paused) video.pause(); }
+  async function keepAwake() {
+    if (!state || state.paused || state.done || document.visibilityState !== 'visible') return;
+    videoKeepAwake();
+    if ('wakeLock' in navigator && !wakeLock) {
+      try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } catch { wakeLock = null; }
+    }
+  }
+  function releaseAwake() {
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+    videoRelease();
+  }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { if (state && !state.paused && !state.done) keepAwake(); render(); }
+    if (document.visibilityState === 'visible') { keepAwake(); render(); }
   });
+  document.addEventListener('touchend', () => keepAwake(), { passive: true });
+  setInterval(() => keepAwake(), 20000);
 
   // ---------- audio ----------
   let ctx = null;
