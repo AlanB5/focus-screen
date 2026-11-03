@@ -21,7 +21,13 @@
     if (!video) {
       video = document.createElement('video');
       video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', '');
-      video.muted = true; video.loop = true; video.setAttribute('title', 'keep awake');
+      // Not muted: on iOS 15+ a muted video does not keep the screen awake. The clip has no audio track.
+      video.setAttribute('title', 'keep awake');
+      video.addEventListener('loadedmetadata', () => {
+        if (video.duration <= 1) video.setAttribute('loop', '');
+        else video.addEventListener('timeupdate', () => { if (video.currentTime > 0.5) video.currentTime = Math.random(); });
+      });
+      video.addEventListener('play', status); video.addEventListener('pause', status);
       video.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0.01;pointer-events:none;left:0;top:0';
       const add = (src, type) => { const el = document.createElement('source'); el.src = src; el.type = type; video.appendChild(el); };
       add(KEEPAWAKE_WEBM, 'video/webm'); add(KEEPAWAKE_MP4, 'video/mp4');
@@ -29,17 +35,24 @@
     }
     if (video.paused) video.play().catch(() => {});
   }
+  // Faint status marker: version, WL = wake lock held, VID = keep-awake video playing.
+  const VERSION = 'v6';
+  function status() {
+    const el = $('status'); if (!el) return;
+    el.textContent = VERSION + (wakeLock ? ' WL' : '') + (video && !video.paused ? ' VID' : '');
+  }
   function videoRelease() { if (video && !video.paused) video.pause(); }
   async function keepAwake() {
     if (!state || state.paused || state.done || document.visibilityState !== 'visible') return;
     videoKeepAwake();
     if ('wakeLock' in navigator && !wakeLock) {
-      try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } catch { wakeLock = null; }
+      try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; status(); }); } catch { wakeLock = null; }
     }
+    status();
   }
   function releaseAwake() {
     if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
-    videoRelease();
+    videoRelease(); status();
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { keepAwake(); render(); }

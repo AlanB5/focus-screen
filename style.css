@@ -47,3 +47,4 @@ section { width: 100%; max-width: 640px; display: flex; flex-direction: column; 
   font: inherit; font-size: 22px; font-weight: 600; color: #0a0a0a; background: #fff;
   border: 0; border-radius: 14px; padding: 16px 48px;
 }
+#status { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); font-size: 10px; color: #fff; opacity: 0.25; font-family: ui-monospace, Menlo, monospace; }
