@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Focus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Focus">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <section id="setup" hidden>
+    <input id="task-input" type="text" placeholder="What are you working on?" autocomplete="off" autocapitalize="sentences" enterkeyhint="go">
+    <div id="minutes" role="radiogroup" aria-label="Minutes">
+      <button type="button" data-min="15">15</button>
+      <button type="button" data-min="25" class="selected">25</button>
+      <button type="button" data-min="45">45</button>
+      <button type="button" data-min="60">60</button>
+    </div>
+    <button type="button" id="start">Start</button>
+  </section>
+  <section id="session" hidden>
+    <div id="task" contenteditable="false" spellcheck="false"></div>
+    <div id="timer">00:00</div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
